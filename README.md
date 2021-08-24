@@ -32,5 +32,3 @@
 >> 3.音频tag（tag.json）  
 >> 4.音频封面（cover.jpg）  
 >> 5.音频评论（comment.json）  
-
-json更新后，原json会压缩至同名文件夹内"日期.zip"存档，文件名为UTC时间戳 
