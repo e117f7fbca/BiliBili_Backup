@@ -26,6 +26,9 @@ anniepath=os.path.join(sys.path[0],'annie')
 anniecookie=os.path.join(sys.path[0],'cookie.txt')
 annieprocess=8
 annieproxy=""
+#key从安卓5.0下客户端抓包获取
+dynamic_like_access_key="???"
+dynamic_like_app_key="???"
 ##############################################################################################################################
 def error_log(string):
     with open(os.path.join(os.path.join(sys.path[0],'log',"error.log")), 'a') as f:
@@ -748,22 +751,13 @@ def dynamicdownload_sub(cardinfo,authorpath,download_mode):
         dynamictype_text='ATC'#专栏
     elif dynamictype == 256:
         dynamictype_text='AUD'#音频
-    elif dynamictype == 512:
-        dynamictype_text='ANI'#番剧
     elif dynamictype == 2048:
-        dynamictype_text='SHA'#分享
-    elif dynamictype == 4200:
-        dynamictype_text='ACT'#活动
-    elif dynamictype == 4300:
-        dynamictype_text='COL'#收藏夹
-    else:
-        dynamictype_text='OTHER'
+        dynamictype_text='ANI'#番剧
 
-
-    if download_mode=="Lite" and (time.time()-cardinfo["desc"]['timestamp']>3*24*60*60):
+    if download_mode=="Lite" and (time.time()-cardinfo["desc"]['timestamp']>7*24*60*600):
         print('└─dyn'+str(dynamicid)+" skipped")
-    elif collect_meta and False:#time.time()-cardinfo["desc"]['timestamp']>6*30*24*60*60:
-        print('└─dyn'+str(dynamicid)+"half year skipped")
+    #elif collect_meta and False:#time.time()-cardinfo["desc"]['timestamp']>6*30*24*60*60:
+    #    print('└─dyn'+str(dynamicid)+"half year skipped")
     else:
         print('└─dyn'+str(dynamicid))
 
@@ -775,11 +769,11 @@ def dynamicdownload_sub(cardinfo,authorpath,download_mode):
             pass
 
         #下载动态.json
-        create_or_renew(dynamicpath,'dynamic','json',json.dumps(cardinfo).encode())
+        download_or_renew(dynamicpath,'dynamic','json',json.dumps(cardinfo).encode())
         
         #下载有图动态内容
         if dynamictype_text =='PIC': 
-    
+            
             #有图动态图片路径
             dynamicpicpath= os.path.join(dynamicpath,'pictures')
             try:
@@ -787,13 +781,14 @@ def dynamicdownload_sub(cardinfo,authorpath,download_mode):
             except:
                 pass
 
-            dynamicpiclist=eval(cardinfo['card'])['item']['pictures']
+            item = json.loads(cardinfo['card'])['item']
+            dynamicpiclist=item['pictures']
             picseq = 1
             for picinfo in dynamicpiclist:
                 url = picinfo['img_src'].replace('\\','')
                 suffix = re.search(r'\.[A-za-z0-9]{1,10}$', url)[0]
                 if ~os.path.exists(os.path.join(dynamicpicpath,str(picseq)+suffix)):
-                    pic = try_get(s,picinfo['img_src'].replace('\\',''),'https://t.bilibili.com/'+ str(dynamicid))
+                    pic = try_get(url,'https://t.bilibili.com/'+ str(dynamicid))
                     open(os.path.join(dynamicpicpath,str(picseq)+suffix), 'wb').write(pic.content)
                 picseq +=1
 
@@ -805,65 +800,231 @@ def dynamicdownload_sub(cardinfo,authorpath,download_mode):
             videosuffix = re.search(r'\.[A-za-z0-9]{3,10}?\?deadline', item['video_playurl'])[0].replace('?deadline','').replace('.','')
             
             if os.path.exists(os.path.join(dynamicpath,'svideo'+videosuffix)) == False:
-                svideo=try_get(s,item['video_playurl'],'https://t.bilibili.com/'+ str(dynamicid))
-                create_or_renew(dynamicpath,'svideo',videosuffix, svideo.content)
+                svideo=try_get(item['video_playurl'],'https://t.bilibili.com/'+ str(dynamicid))
+                download_or_renew(dynamicpath,'svideo',videosuffix, svideo.content)
             
             if os.path.exists(os.path.join(dynamicpath,'cover'+scoversuffix)) == False:
-                scover=try_get(s,item['cover']["unclipped"],'https://t.bilibili.com/'+ str(dynamicid))
-                create_or_renew(dynamicpath,'cover',scoversuffix, scover.content)
+                scover=try_get(item['cover']["unclipped"],'https://t.bilibili.com/'+ str(dynamicid))
+                download_or_renew(dynamicpath,'cover',scoversuffix, scover.content)
 
             if os.path.exists(os.path.join(dynamicpath,'cover_clipped'+scoversuffix)) == False:    
-                scoverclipped=try_get(s,item['cover']["default"],'https://t.bilibili.com/'+ str(dynamicid))
-                create_or_renew(dynamicpath,'cover_clipped',scoverclippedsuffix, scoverclipped.content)
+                scoverclipped=try_get(item['cover']["default"],'https://t.bilibili.com/'+ str(dynamicid))
+                download_or_renew(dynamicpath,'cover_clipped',scoverclippedsuffix, scoverclipped.content)
 
         elif dynamictype_text == 'REP':
             try:
                 print(' └─dyn'+str(cardinfo['desc']['origin']['dynamic_id']))
-                detail=try_get(s,"https://api.vc.bilibili.com/dynamic_svr/v1/dynamic_svr/get_dynamic_detail?dynamic_id="+str(cardinfo['desc']['origin']['dynamic_id']),"https://t.bilibili.com/"+str(cardinfo['desc']['origin']['dynamic_id']))
+                detail=try_get("https://api.vc.bilibili.com/dynamic_svr/v1/dynamic_svr/get_dynamic_detail?dynamic_id="+str(cardinfo['desc']['origin']['dynamic_id']),"https://t.bilibili.com/"+str(cardinfo['desc']['origin']['dynamic_id']))
                 detail_data=json_data(detail.content)
-                dynamicdownload_sub(detail_data['card'],os.path.join(dynamicpath,'origin'),download_mode)
+                origindynamicdownload_sub(detail_data['card'],dynamicpath,download_mode)
             except Exception as ee:
                 print(ee)
-                
-        if "item" in json.loads(cardinfo['card']) and "description" in json.loads(cardinfo['card'])['item'] and ("转发" in json.loads(cardinfo['card'])['item']['description'] or "评论" in json.loads(cardinfo['card'])['item']['description']) and "抽" in json.loads(cardinfo['card'])['item']['description']:
-            print("Skip Useless dynamic")
-        elif dynamictype_text != 'ANI' or dynamictype_text !='COL' or dynamictype_text != 'ACT':#番剧/收藏夹/活动/分享
-            #获取动态评论.json
-            try:
-                rid = cardinfo['desc']['rid']
-                commentlist = reply_comment(rid,dynamictype_text)
-                if commentlist == []:
-                    did = cardinfo['desc']['dynamic_id']#动态号
-                    commentlist = reply_comment(did,dynamictype_text)
-                    
-                create_or_renew(dynamicpath,'comment','json', json.dumps(commentlist).encode())
+    
+        if "item" in json.loads(cardinfo['card']).keys():
+            content=json.loads(cardinfo['card'])['item']['content']
+            if "转发" in content and '抽' in content:
+                ##
+                pass
+            else:
 
-            except Exception as e:
-                print('Dynamic Comment Error')
-                print(e)
+                #获取动态评论.json
+                try:
+                    rid = cardinfo['desc']['rid']
+                    commentlist = reply_comment(rid,dynamictype_text)
+                    if commentlist == []:
+                        did = cardinfo['desc']['dynamic_id']#动态号
+                        commentlist = reply_comment(did,dynamictype_text)
                         
-            #获取动态点赞.json
-            try:
-                like=try_get(s,"https://api.vc.bilibili.com/dynamic_like/v1/dynamic_like/spec_item_likes?access_key=2145306126003eb527a563688988b8b1&appkey=1d8b6e7d45233436&dynamic_id="+str(dynamicid)+"&pn=1&ps=50","https://t.bilibili.com/"+str(dynamicid))
-                like_data=json_data(like.content)
-                if 'item_likes' in like_data.keys():
-                    likelist=like_data['item_likes']
+                    download_or_renew(dynamicpath,'comment','json', json.dumps(commentlist).encode())
 
-                    request_num=( like_data['total_count'] // len(like_data['item_likes']) )+3
-
-                    for each in range(2,request_num):
-                        like=try_get(s,"https://api.vc.bilibili.com/dynamic_like/v1/dynamic_like/spec_item_likes?access_key=2145306126003eb527a563688988b8b1&appkey=1d8b6e7d45233436&dynamic_id="+str(dynamicid)+"&pn="+str(each)+"&ps=50","https://t.bilibili.com/"+str(dynamicid))
+                except Exception as e:
+                    print('Dynamic Comment Error')
+                    print(e)
+                
+            
+                #获取动态点赞.json
+                if cardinfo['desc']['like'] > 0:
+                    try:
+                        like=try_get("http://api.vc.bilibili.com/dynamic_like/v1/dynamic_like/spec_item_likes?access_key="+dynamic_like_access_key+"&appkey="+dynamic_like_app_key+"&dynamic_id="+str(dynamicid)+"&pn=1&ps=50","https://t.bilibili.com/"+str(dynamicid))
                         like_data=json_data(like.content)
-                        try:
-                            likelist=likelist+like_data['item_likes']
-                        except:
-                            pass
+                        if 'item_likes' in like_data.keys():
+                            likelist=like_data['item_likes']
 
-                    finallist=list(reversed(likelist))
-                    create_or_renew(dynamicpath,'like','json', json.dumps(finallist).encode())
-            except Exception as e:
-                error_log("https://t.bilibili.com/"+str(dynamicid)+" Like Error + "+e)
-                print('Dynamic Like Error')
+                            request_num=like_data['total_count'] // len(like_data['item_likes'])
+                            request_num=request_num +3
+
+                            itertable=[]
+                            for each in range(2,request_num):
+                                itertable.append([dynamicid,each])
+
+                            with ThreadPoolExecutor(max_workers=16) as likeexecutor:
+                                alllikedata = likeexecutor.map(dynamic_like,itertable)
+
+                            for eachlikechunk in alllikedata:
+                                likelist=likelist+eachlikechunk
+
+                            finallist=list(reversed(likelist))
+
+                            if len(finallist) < like_data['total_count']:
+                                with open(os.path.join(sys.path[0],"Log",'error.txt'), 'a',encoding='utf-8') as f:
+                                    f.write(str(time.strftime("[%Y-%m-%d %H:%M:%S]",time.localtime()))+" requestnum: "+str(request_num)+" get:"+str(len(finallist))+" total:"+str(like_data['total_count'])+"\n")
+                            download_or_renew(dynamicpath,'like','json', json.dumps(finallist).encode())
+                    except:
+                        print('Dynamic Like Error')
+
+
+##############################################################################################################################
+def dynamic_like(itertable):
+    like=try_get("http://api.vc.bilibili.com/dynamic_like/v1/dynamic_like/spec_item_likes?access_key="+dynamic_like_access_key+"&appkey="+dynamic_like_app_key+"&dynamic_id="+str(itertable[0])+"&pn="+str(itertable[1])+"&ps=50","https://t.bilibili.com/"+str(itertable[0]))
+    like_data=json_data(like.content)
+    if "item_likes" in like_data.keys():
+        return like_data['item_likes']
+    else:
+        return []
+##############################################################################################################################
+def origindynamicdownload_sub(cardinfo,authorpath,download_mode):   
+    if "item" in json.loads(cardinfo['card']).keys():
+        if "转发" in json.loads(cardinfo['card'])['item']['description'] and "抽" in json.loads(cardinfo['card'])['item']['description']:
+            print("Useless dynamic")
+            subprocess.call("rm -r "+os.path.join(authorpath,'origin'),shell=True,stderr=DEVNULL)
+        if "处罚" in json.loads(cardinfo['card'])['item']['description'] and "公告" in json.loads(cardinfo['card'])['item']['description']:
+            print("Useless dynamic")
+            subprocess.call("rm -r "+os.path.join(authorpath,'origin'),shell=True,stderr=DEVNULL)
+        else:
+            #动态id号
+            dynamicid=cardinfo['desc']['dynamic_id']
+
+            # 1转发 2有图动态 4文字动态 8视频投稿 16小视频 32番剧更新 64专栏 256音频
+            dynamictype=cardinfo['desc']['type']
+
+            if dynamictype == 1:
+                dynamictype_text='REP'#回复
+            elif dynamictype == 2:
+                dynamictype_text='PIC'#图片动态
+            elif dynamictype == 4:
+                dynamictype_text='TXT'#文本动态
+            elif dynamictype == 8:
+                dynamictype_text='VID'#视频
+            elif dynamictype == 16:
+                dynamictype_text='SVID'#短视频
+            elif dynamictype == 64:
+                dynamictype_text='ATC'#专栏
+            elif dynamictype == 256:
+                dynamictype_text='AUD'#音频
+            elif dynamictype == 2048:
+                dynamictype_text='ANI'#番剧
+            else:
+                dynamictype_text='OTHER'
+                print("dynamictype——"+str(dynamictype))
+
+
+            if download_mode=="Lite" and (time.time()-cardinfo["desc"]['timestamp']>7*24*60*600):
+                #print('└─dyn'+str(dynamicid)+" skipped")
+                pass
+            elif collect_meta and False:#time.time()-cardinfo["desc"]['timestamp']>6*30*24*60*60:
+                #print('└─dyn'+str(dynamicid)+"half year skipped")
+                pass
+            else:
+                #print('└─dyn'+str(dynamicid))
+
+                #根据动态id号创建每条动态独立文件夹
+                dynamicpath=os.path.join(authorpath,'origin','dyn' +str(dynamicid))
+                try:
+                    os.makedirs(dynamicpath)
+                except:
+                    pass
+
+                #下载动态.json
+                download_or_renew(dynamicpath,'dynamic','json',json.dumps(cardinfo).encode())
+                
+                #下载有图动态内容
+                if dynamictype_text =='PIC': 
+                    
+                    #有图动态图片路径
+                    dynamicpicpath= os.path.join(dynamicpath,'pictures')
+                    try:
+                        os.mkdir(dynamicpicpath)
+                    except:
+                        pass
+
+                    item = json.loads(cardinfo['card'])['item']
+                    dynamicpiclist=item['pictures']
+                    picseq = 1
+                    for picinfo in dynamicpiclist:
+                        url = picinfo['img_src'].replace('\\','')
+                        suffix = re.search(r'\.[A-za-z0-9]{1,10}$', url)[0]
+                        if os.path.exists(os.path.join(dynamicpicpath,str(picseq)+suffix)) == False:
+                            pic = try_get(url,'https://t.bilibili.com/'+ str(dynamicid))
+                            open(os.path.join(dynamicpicpath,str(picseq)+suffix), 'wb').write(pic.content)
+                        picseq +=1
+
+                #下载小视频动态内容
+                elif dynamictype_text == 'SVID':
+                    item = json.loads(cardinfo['card'])['item']
+                    scoversuffix = re.search(r'\.[A-za-z0-9]{3,10}?$', item['cover']["unclipped"])[0].replace('.','')
+                    scoverclippedsuffix = re.search(r'\.[A-za-z0-9]{3,10}?$', item['cover']["default"])[0].replace('.','')
+                    videosuffix = re.search(r'\.[A-za-z0-9]{3,10}?\?deadline', item['video_playurl'])[0].replace('?deadline','').replace('.','')
+                    
+                    if os.path.exists(os.path.join(dynamicpath,'svideo'+videosuffix)) == False:
+                        svideo=try_get(item['video_playurl'],'https://t.bilibili.com/'+ str(dynamicid))
+                        download_or_renew(dynamicpath,'svideo',videosuffix, svideo.content)
+                    
+                    if os.path.exists(os.path.join(dynamicpath,'cover'+scoversuffix)) == False:
+                        scover=try_get(item['cover']["unclipped"],'https://t.bilibili.com/'+ str(dynamicid))
+                        download_or_renew(dynamicpath,'cover',scoversuffix, scover.content)
+
+                    if os.path.exists(os.path.join(dynamicpath,'cover_clipped'+scoversuffix)) == False:    
+                        scoverclipped=try_get(item['cover']["default"],'https://t.bilibili.com/'+ str(dynamicid))
+                        download_or_renew(dynamicpath,'cover_clipped',scoverclippedsuffix, scoverclipped.content)
+                    
+    
+                
+                #获取动态评论.json
+                try:
+                    rid = cardinfo['desc']['rid']
+                    commentlist = reply_comment(rid,dynamictype_text)
+                    if commentlist != []:
+                        did = cardinfo['desc']['dynamic_id']#动态号
+                        commentlist = reply_comment(did,dynamictype_text)
+                        
+                    download_or_renew(dynamicpath,'comment','json', json.dumps(commentlist).encode())
+
+                except Exception as e:
+                    print('Dynamic Comment Error')
+                    print(e)
+                
+            
+                #获取动态点赞.json
+                try:
+                    like=try_get("http://api.vc.bilibili.com/dynamic_like/v1/dynamic_like/spec_item_likes?access_key=2145306126003eb527a563688988b8b1&appkey=1d8b6e7d45233436&dynamic_id="+str(dynamicid)+"&pn=1&ps=50","https://t.bilibili.com/"+str(dynamicid))
+                    like_data=json_data(like.content)
+                    if 'item_likes' in like_data:
+                        likelist=like_data['item_likes']
+                        for likepn in range(2,99999):
+                            like=try_get("http://api.vc.bilibili.com/dynamic_like/v1/dynamic_like/spec_item_likes?access_key=2145306126003eb527a563688988b8b1&appkey=1d8b6e7d45233436&dynamic_id="+str(dynamicid)+"&pn="+str(likepn)+"&ps=50","https://t.bilibili.com/"+str(dynamicid))
+                            like_data=json_data(like.content)
+                            try:
+                                likelist=likelist+like_data['item_likes']
+                            except:
+                                pass
+                            if like_data['has_more'] == 0:
+                                break
+
+                        finallist=list(reversed(likelist))
+                        download_or_renew(dynamicpath,'like','json', json.dumps(finallist).encode())
+                except:
+                    print('Dynamic Like Error')
+    elif "aid" in json.loads(cardinfo['card']).keys():
+        print("origin video")
+    elif "fid" in json.loads(cardinfo['card']).keys():
+        print("origin favorite")
+    elif "banner_url" in json.loads(cardinfo['card']).keys():
+        print("origin article")
+    elif "roomid" in json.loads(cardinfo['card']).keys():
+        print("origin live")
+    else:
+        with open(os.path.join(sys.path[0],"Log",'error.txt'), 'a',encoding='utf-8') as f:
+            f.write(str(time.strftime("[%Y-%m-%d %H:%M:%S]",time.localtime())) + "Origindynamic: "+ cardinfo['card'] +"\n")
 
 ##############################################################################################################################
 if  __name__ == "__main__":
