@@ -27,6 +27,11 @@ annieprocess=8
 annieproxy=""
 ##############################################################################################################################
 #抽取ua
+dynamic_like_access_key="???"
+dynamic_like_app_key="???"
+
+##############################################################################################################################
+#抽取ua
 def get_ua():
     version=random.choice(range(50,83))
     return "Mozilla/5.0 (Windows NT 10.0; WOW64; rv:"+str(version)+".0) Gecko/20100101 Firefox/"+str(version)+".0"
@@ -47,7 +52,6 @@ def get_proxy(proxyfile,proxy_q):
                 #ip=json.loads(dns_req.content)['Answer'][2]['data']
                 ip='128.1.62.201'
                 proxylist.append([eachproxy.split("##")[0].replace('\n',''),float(eachproxy.split("##")[1].replace('\n','')),0.1,ip])
-                print("proxy:"+eachproxy.split("##")[0].replace('\n','')+" destip:"+ip)
             except:
                 pass
 
@@ -125,14 +129,6 @@ def try_get(url,refererurl):
                     else:
                         proxydic=None
                         blockfile="Direct"
-                
-                #if "api.bilibili.com" in url:
-                #    url=url.replace("api.bilibili.com",proxydest)
-                #    header.update({'host': "api.bilibili.com"})
-                
-                #if "api.vc.bilibili.com" in url:
-                #    url=url.replace("api.vc.bilibili.com",proxydest)
-                #    header.update({'host': "api.vc.bilibili.com"})
 
                 if check_block(os.path.join(block_folder,blockfile),301) == False:
                     try:
@@ -868,7 +864,7 @@ def dynamicdownload_sub(cardinfo,authorpath,download_mode):
                 #获取动态点赞.json
                 if cardinfo['desc']['like'] > 0:
                     try:
-                        like=try_get("http://api.vc.bilibili.com/dynamic_like/v1/dynamic_like/spec_item_likes?access_key=2145306126003eb527a563688988b8b1&appkey=1d8b6e7d45233436&dynamic_id="+str(dynamicid)+"&pn=1&ps=50","https://t.bilibili.com/"+str(dynamicid))
+                        like=try_get("http://api.vc.bilibili.com/dynamic_like/v1/dynamic_like/spec_item_likes?access_key="+dynamic_like_access_key+"&appkey="+dynamic_like_app_key+"&dynamic_id="+str(dynamicid)+"&pn=1&ps=50","https://t.bilibili.com/"+str(dynamicid))
                         like_data=json_data(like.content)
                         if 'item_likes' in like_data.keys():
                             likelist=like_data['item_likes']
@@ -898,7 +894,7 @@ def dynamicdownload_sub(cardinfo,authorpath,download_mode):
 
 ##############################################################################################################################
 def dynamic_like(itertable):
-    like=try_get("http://api.vc.bilibili.com/dynamic_like/v1/dynamic_like/spec_item_likes?access_key=2145306126003eb527a563688988b8b1&appkey=1d8b6e7d45233436&dynamic_id="+str(itertable[0])+"&pn="+str(itertable[1])+"&ps=50","https://t.bilibili.com/"+str(itertable[0]))
+    like=try_get("http://api.vc.bilibili.com/dynamic_like/v1/dynamic_like/spec_item_likes?access_key="+dynamic_like_access_key+"&appkey="+dynamic_like_app_key+"&dynamic_id="+str(itertable[0])+"&pn="+str(itertable[1])+"&ps=50","https://t.bilibili.com/"+str(itertable[0]))
     like_data=json_data(like.content)
     if "item_likes" in like_data.keys():
         return like_data['item_likes']
