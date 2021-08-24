@@ -4,10 +4,10 @@
 
 备份内容:
 >UP主空间  
->+头像（face.jpg）  
->1.banner（top_photo.jpg）  
->2.关注数（stat.json）  
->3.个人介绍（info.json）  
+>>1.头像（face.jpg）  
+>>2.banner（top_photo.jpg）  
+>>3.关注数（stat.json）  
+>>4.个人介绍（info.json）  
 >动态  
 >1.动态原数据（dynamic.json）（内容、浏览、点赞、转发、原动态）  
 >2.动态评论（comment.json）（评论区内容）  
